@@ -2,6 +2,7 @@ package com.example.lesson12saveinstore
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -19,7 +20,10 @@ class PrefsFragment() : Fragment() {
     private val uploadImageLauncher = registerForActivityResult( //create launcher for uploading photos from camera
         ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
+        checkNotNull(bitmap)
+        savePhoto(bitmap)
         binding.imageView.setImageBitmap(bitmap) //got an image in bitmat format
+        updateAdapter()
     }
 
     private val adapter = ImageAdapter()
@@ -43,6 +47,7 @@ class PrefsFragment() : Fragment() {
                 uploadImageLauncher.launch(null)
             }
         }
+        updateAdapter()
     }
 
     override fun onDestroyView() {
@@ -58,12 +63,26 @@ class PrefsFragment() : Fragment() {
                     throw IOException("Couldn't save bitmap")
                 }
             }
-        } catch (IOException) {
+        } catch (e: IOException) {
 
         }
     }
 
-    private fun loadPhoto() {
+    private fun updateAdapter() {
+        val photos = loadPhotos()
+        adapter.submitList(photos)
+    }
 
+    private fun loadPhotos(): List<Image> {
+        return requireContext()
+            .filesDir
+            .listFiles()
+            ?.filter { it.canRead() && it.isFile && it.name.endsWith(".jpg") }
+            ?.map { file ->
+                val bytes = file.readBytes()
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                Image(file.name, bitmap)
+            }
+            ?: emptyList()
     }
 }
